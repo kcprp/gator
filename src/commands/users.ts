@@ -1,5 +1,5 @@
 import { setUser } from "../config";
-import { createUser, getUser } from "src/db/queries/users";
+import { createUser, getUser, deleteUsers } from "src/db/queries/users";
 
 export async function handlerLogin(cmdName: string, ...args: string[]) {
   if (args.length === 0) {
