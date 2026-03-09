@@ -1,5 +1,5 @@
-import { setUser } from "../config";
-import { createUser, getUser, deleteUsers } from "src/db/queries/users";
+import { setUser, readConfig } from "../config";
+import { createUser, getUser, getUsers } from "src/db/queries/users";
 
 export async function handlerLogin(cmdName: string, ...args: string[]) {
   if (args.length === 0) {
@@ -33,4 +33,19 @@ export async function handlerRegister(cmdName: string, ...args: string[]) {
   }
   setUser(user.name);
   console.log(`User ${user.name} created`);
+}
+
+export async function handlerListUsers(_: string) {
+  const config = readConfig();
+  const currentUser = config.currentUserName;
+
+  const users = await getUsers();
+  if (!users || users.length === 0) {
+    throw new Error("No users have been registered yet.");
+  }
+
+  users.forEach(user => {
+    const isCurrent = user.name === currentUser ? " (current)" : "";
+    console.log(`* ${user.name}${isCurrent}`);
+  });
 }
