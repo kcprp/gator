@@ -1,5 +1,5 @@
 import { fetchFeed } from "src/utils/rss";
-import { createFeed, getFeeds } from "src/db/queries/feeds";
+import { createFeed, getFeeds, getFeed, createFeedFollow, getFeedFollowsForUser } from "src/db/queries/feeds";
 import { readConfig } from "src/config";
 import { getUser } from "src/db/queries/users";
 import type { Feed, User } from "src/db/schema";
@@ -31,7 +31,9 @@ export async function handlerAddFeed(cmdName: string, ...args: string[]) {
   if (!feed) {
     throw new Error(`Failed to create feed`);
   }
-  
+
+  await createFeedFollow(user.id, feed.id)
+
   console.log("Feed created successfully:");
   printFeed(feed, user);
 };
@@ -48,6 +50,51 @@ export async function handlerFeeds(_: string, ...args: string[]) {
   });
 }
 
+export async function handlerFollow(cmdName: string, ...args: string[]) {
+  if (args.length !== 1) {
+    throw new Error(`usage: ${cmdName} <url>`);
+  }
+  
+  const config = readConfig();
+  const user = await getUser(config.currentUserName);
+  
+  if (!user) {
+    throw new Error(`User ${config.currentUserName} not found`)
+  }
+
+  const url = args[0];
+  const feed = await getFeed(url);
+
+  if (!feed) {
+    throw new Error(`Could not find feed corresponding to ${url}`);
+  }
+  
+  const feedFollow = await createFeedFollow(user.id, feed.id)
+  console.log(`* Feed name:     ${feedFollow.feedName}`);
+  console.log(`* User name:     ${feedFollow.userName}`);
+}
+
+export async function handlerFollowing(_: string) {
+  const config = readConfig();
+  const user = await getUser(config.currentUserName);
+  
+  if (!user) {
+    throw new Error(`User ${config.currentUserName} not found`)
+  }
+
+  const feedFollows = await getFeedFollowsForUser(user.id);
+
+  if (feedFollows.length === 0) {
+    console.log(`${user.name} is not following any feeds.`);
+    return;
+  }
+
+  console.log(`${user.name} is following:`);
+  feedFollows.forEach((feedFollow) => {
+    console.log(`* ${feedFollow.feedName}`);
+  });
+}
+
 function printFeed(feed: Feed, user: User) {
   console.log(`* ID:            ${feed.id}`);
   console.log(`* Created:       ${feed.createdAt}`);
@@ -56,4 +103,3 @@ function printFeed(feed: Feed, user: User) {
   console.log(`* URL:           ${feed.url}`);
   console.log(`* User:          ${user.name}`);
 }
-

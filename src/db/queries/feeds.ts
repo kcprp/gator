@@ -1,6 +1,6 @@
 import { db } from "..";
-import { feeds, users } from "../schema";
-import { eq } from "drizzle-orm";
+import { feeds, users, feedFollows } from "../schema";
+import { eq, getTableColumns } from "drizzle-orm";
 
 export async function createFeed(name: string, url: string, userId: string) {
   const [result] = await db.insert(feeds).values({ name: name, url: url, userId: userId }).returning();
@@ -20,5 +20,42 @@ export async function getFeeds() {
     })
     .from(feeds)
     .innerJoin(users, eq(feeds.userId, users.id));
+  return results;
+}
+
+export async function getFeed(url: string) {
+  const [result] = await db.select().from(feeds).where(eq(feeds.url, url));
+  return result;
+}
+
+export async function createFeedFollow(userId: string, feedId: string) {
+  const [newFeedFollow] = await db.insert(feedFollows).values({ userId, feedId }).returning();
+
+  const [result] = await db
+    .select({
+      ...getTableColumns(feedFollows),
+      userName: users.name,
+      feedName: feeds.name,
+    })
+    .from(feedFollows)
+    .innerJoin(feeds, eq(feedFollows.feedId, feeds.id))
+    .innerJoin(users, eq(feedFollows.userId, users.id))
+    .where(eq(feedFollows.id, newFeedFollow.id));
+
+  return result;
+}
+
+export async function getFeedFollowsForUser(userId: string) {
+  const results = await db
+    .select({
+      ...getTableColumns(feedFollows),
+      userName: users.name,
+      feedName: feeds.name,
+    })
+    .from(feedFollows)
+    .innerJoin(feeds, eq(feedFollows.feedId, feeds.id))
+    .innerJoin(users, eq(feedFollows.userId, users.id))
+    .where(eq(feedFollows.userId, userId));
+
   return results;
 }
