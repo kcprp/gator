@@ -12,16 +12,9 @@ export async function handlerAgg(_: string, ...args: string[]) {
   console.log(JSON.stringify(feed, null, 2));
 }
 
-export async function handlerAddFeed(cmdName: string, ...args: string[]) {
+export async function handlerAddFeed(cmdName: string, user: User, ...args: string[]) {
   if (args.length !== 2) {
     throw new Error(`usage: ${cmdName} <feed_name> <url>`);
-  }
-
-  const config = readConfig();
-  const user = await getUser(config.currentUserName);
-
-  if (!user) {
-    throw new Error(`User ${config.currentUserName} not found`)
   }
   
   const feedName = args[0];
@@ -50,16 +43,9 @@ export async function handlerFeeds(_: string, ...args: string[]) {
   });
 }
 
-export async function handlerFollow(cmdName: string, ...args: string[]) {
+export async function handlerFollow(cmdName: string, user: User, ...args: string[]) {
   if (args.length !== 1) {
     throw new Error(`usage: ${cmdName} <url>`);
-  }
-  
-  const config = readConfig();
-  const user = await getUser(config.currentUserName);
-  
-  if (!user) {
-    throw new Error(`User ${config.currentUserName} not found`)
   }
 
   const url = args[0];
@@ -74,14 +60,7 @@ export async function handlerFollow(cmdName: string, ...args: string[]) {
   console.log(`* User name:     ${feedFollow.userName}`);
 }
 
-export async function handlerFollowing(_: string) {
-  const config = readConfig();
-  const user = await getUser(config.currentUserName);
-  
-  if (!user) {
-    throw new Error(`User ${config.currentUserName} not found`)
-  }
-
+export async function handlerFollowing(_: string, user: User) {
   const feedFollows = await getFeedFollowsForUser(user.id);
 
   if (feedFollows.length === 0) {
