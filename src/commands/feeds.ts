@@ -1,7 +1,5 @@
 import { fetchFeed } from "src/utils/rss";
-import { createFeed, getFeeds, getFeed, createFeedFollow, getFeedFollowsForUser } from "src/db/queries/feeds";
-import { readConfig } from "src/config";
-import { getUser } from "src/db/queries/users";
+import { createFeed, getFeeds, getFeed, createFeedFollow, deleteFeedFollow, getFeedFollowsForUser } from "src/db/queries/feeds";
 import type { Feed, User } from "src/db/schema";
 
 const DEFAULT_FEED_URL = "https://www.wagslane.dev/index.xml";
@@ -58,6 +56,22 @@ export async function handlerFollow(cmdName: string, user: User, ...args: string
   const feedFollow = await createFeedFollow(user.id, feed.id)
   console.log(`* Feed name:     ${feedFollow.feedName}`);
   console.log(`* User name:     ${feedFollow.userName}`);
+}
+
+export async function handlerUnfollow(cmdName: string, user: User, ...args: string[]) {
+  if (args.length !== 1) {
+    throw new Error(`usage: ${cmdName} <url>`);
+  }
+  
+  const url = args[0];
+  const feed = await getFeed(url);
+
+  if (!feed) {
+    throw new Error(`Could not find feed corresponding to ${url}`);
+  }
+
+  await deleteFeedFollow(user.id, feed.id);
+  console.log(`Deleted feed: ${feed.name} for user: ${user.name}`);
 }
 
 export async function handlerFollowing(_: string, user: User) {
