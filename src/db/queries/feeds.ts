@@ -1,6 +1,6 @@
 import { db } from "..";
 import { feeds, users, feedFollows } from "../schema";
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 
 export async function createFeed(name: string, url: string, userId: string) {
   const [result] = await db.insert(feeds).values({ name: name, url: url, userId: userId }).returning();
@@ -26,6 +26,22 @@ export async function getFeeds() {
 export async function getFeed(url: string) {
   const [result] = await db.select().from(feeds).where(eq(feeds.url, url));
   return result;
+}
+
+export async function markFeedFetched(feedId: string) {
+  await db.update(feeds)
+    .set({ updatedAt: sql`NOW()`, lastFetchedAt: sql`NOW()` })
+    .where(eq(feeds.id, feedId))
+}
+
+export async function getNextFeedToFetch() {
+  const [nextFeed] = await db
+    .select()
+    .from(feeds)
+    .orderBy(sql`${feeds.lastFetchedAt} ASC NULLS FIRST`)
+    .limit(1);
+
+  return nextFeed;
 }
 
 export async function createFeedFollow(userId: string, feedId: string) {

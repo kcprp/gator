@@ -1,13 +1,59 @@
 import { fetchFeed } from "src/utils/rss";
-import { createFeed, getFeeds, getFeed, createFeedFollow, deleteFeedFollow, getFeedFollowsForUser } from "src/db/queries/feeds";
+import { createFeed, getFeeds, getFeed, createFeedFollow, deleteFeedFollow, getFeedFollowsForUser, getNextFeedToFetch, markFeedFetched } from "src/db/queries/feeds";
 import type { Feed, User } from "src/db/schema";
 
-const DEFAULT_FEED_URL = "https://www.wagslane.dev/index.xml";
+const DEFAULT_AGG_INTERVAL_MS = 60_000;
 
-export async function handlerAgg(_: string, ...args: string[]) {
-  const feedUrl = args[0] ?? DEFAULT_FEED_URL;
-  const feed = await fetchFeed(feedUrl);
-  console.log(JSON.stringify(feed, null, 2));
+export async function handlerAgg(cmdName: string, ...args: string[]) {
+  const intervalMs =
+    args[0] !== undefined ? Number(args[0]) : DEFAULT_AGG_INTERVAL_MS;
+  if (!Number.isFinite(intervalMs) || intervalMs < 1) {
+    throw new Error(
+      `usage: ${cmdName} [interval_ms] — interval must be a positive number`,
+    );
+  }
+
+  let scrapeInFlight = false;
+  const runScrape = () => {
+    if (scrapeInFlight) return;
+    scrapeInFlight = true;
+    scrapeFeeds()
+      .catch((err) => {
+        console.error("Error in scraping feeds:", err);
+      })
+      .finally(() => {
+        scrapeInFlight = false;
+      });
+  };
+
+  runScrape();
+  const interval = setInterval(runScrape, intervalMs);
+
+  await new Promise<void>((resolve) => {
+    process.once("SIGINT", () => {
+      console.log("Shutting down feed aggregator...");
+      clearInterval(interval);
+      resolve();
+    });
+  });
+}
+
+async function scrapeFeeds() {
+  const nextFeed = await getNextFeedToFetch();
+
+  if (!nextFeed) {
+    throw new Error("No feeds available");
+  }
+
+  console.log(`Reading feed: ${nextFeed.name} (${nextFeed.url})`);
+  await markFeedFetched(nextFeed.id);
+  const feedData = await fetchFeed(nextFeed.url);
+  const items = feedData.channel.item;
+  if (items.length > 0) {
+    items.forEach((i) => console.log(`* ${i.title}`));
+  } else {
+    console.log("No items found in feed.");
+  }
 }
 
 export async function handlerAddFeed(cmdName: string, user: User, ...args: string[]) {
