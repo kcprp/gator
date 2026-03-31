@@ -23,6 +23,11 @@ export async function fetchFeed(feedUrl: string) {
       "User-Agent": "gator"
     }
   });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch feed: ${response.status} ${response.statusText}`);
+  }
+
   const feed = await response.text();
 
   // Parse using fast-xml-parser
@@ -42,7 +47,9 @@ export async function fetchFeed(feedUrl: string) {
   
   const items: Partial<RSSItem>[] = Array.isArray(channel.item)
     ? channel.item
-    : [];
+    : channel.item
+      ? [channel.item]
+      : [];
 
   const rssItems: RSSItem[] = [];
   items.forEach((item) => {

@@ -10,12 +10,7 @@ export async function createFeed(name: string, url: string, userId: string) {
 export async function getFeeds() {
   const results = await db
     .select({
-      id: feeds.id,
-      createdAt: feeds.createdAt,
-      updatedAt: feeds.updatedAt,
-      name: feeds.name,
-      url: feeds.url,
-      userId: feeds.userId,
+      ...getTableColumns(feeds),
       userName: users.name,
     })
     .from(feeds)
@@ -34,14 +29,16 @@ export async function markFeedFetched(feedId: string) {
     .where(eq(feeds.id, feedId))
 }
 
-export async function getNextFeedToFetch() {
+export async function getNextFeedToFetch(userId: string) {
   const [nextFeed] = await db
     .select()
     .from(feeds)
+    .innerJoin(feedFollows, eq(feeds.id, feedFollows.feedId))
+    .where(eq(feedFollows.userId, userId))
     .orderBy(sql`${feeds.lastFetchedAt} ASC NULLS FIRST`)
     .limit(1);
 
-  return nextFeed;
+  return nextFeed?.feeds;
 }
 
 export async function createFeedFollow(userId: string, feedId: string) {

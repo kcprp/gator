@@ -1,10 +1,16 @@
 import { fetchFeed } from "src/utils/rss";
 import { createFeed, getFeeds, getFeed, createFeedFollow, deleteFeedFollow, getFeedFollowsForUser, getNextFeedToFetch, markFeedFetched } from "src/db/queries/feeds";
+import { createPost } from "src/db/queries/posts";
+import type { NewPost } from "src/db/schema";
 import type { Feed, User } from "src/db/schema";
 
 const DEFAULT_AGG_INTERVAL_MS = 60_000;
 
-export async function handlerAgg(cmdName: string, ...args: string[]) {
+export async function handlerAgg(
+  cmdName: string,
+  user: User,
+  ...args: string[]
+) {
   const intervalMs =
     args[0] !== undefined ? Number(args[0]) : DEFAULT_AGG_INTERVAL_MS;
   if (!Number.isFinite(intervalMs) || intervalMs < 1) {
@@ -17,7 +23,7 @@ export async function handlerAgg(cmdName: string, ...args: string[]) {
   const runScrape = () => {
     if (scrapeInFlight) return;
     scrapeInFlight = true;
-    scrapeFeeds()
+    scrapeFeeds(user)
       .catch((err) => {
         console.error("Error in scraping feeds:", err);
       })
@@ -38,22 +44,46 @@ export async function handlerAgg(cmdName: string, ...args: string[]) {
   });
 }
 
-async function scrapeFeeds() {
-  const nextFeed = await getNextFeedToFetch();
+async function scrapeFeeds(user: User) {
+  const nextFeed = await getNextFeedToFetch(user.id);
 
   if (!nextFeed) {
-    throw new Error("No feeds available");
+    console.log(`No followed feeds to fetch for ${user.name}.`);
+    return;
   }
 
   console.log(`Reading feed: ${nextFeed.name} (${nextFeed.url})`);
-  await markFeedFetched(nextFeed.id);
   const feedData = await fetchFeed(nextFeed.url);
   const items = feedData.channel.item;
-  if (items.length > 0) {
-    items.forEach((i) => console.log(`* ${i.title}`));
-  } else {
+
+  if (items.length === 0) {
     console.log("No items found in feed.");
+    await markFeedFetched(nextFeed.id);
+    return;
   }
+
+  for (const item of items) {
+    const publishedAt = new Date(item.pubDate);
+    if (Number.isNaN(publishedAt.getTime())) {
+      console.warn(`Skipping post with invalid pubDate: ${item.title}`);
+      continue;
+    }
+
+    const newPost: NewPost = {
+      url: item.link,
+      feedId: nextFeed.id,
+      title: item.title,
+      description: item.description,
+      publishedAt,
+    };
+
+    const createdPost = await createPost(newPost);
+    if (createdPost) {
+      console.log(`* Added post: ${item.title}`);
+    }
+  }
+
+  await markFeedFetched(nextFeed.id);
 }
 
 export async function handlerAddFeed(cmdName: string, user: User, ...args: string[]) {

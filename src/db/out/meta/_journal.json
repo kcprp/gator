@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772888446963,
-      "tag": "0000_married_devos",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1773910195382,
-      "tag": "0001_sudden_selene",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1774091464975,
-      "tag": "0002_harsh_songbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1774612050714,
-      "tag": "0003_faithful_george_stacy",
+      "when": 1774951161248,
+      "tag": "0000_cool_quasar",
       "breakpoints": true
     }
   ]
