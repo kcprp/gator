@@ -1,6 +1,6 @@
-# Gator
+# gator
 
-Gator is a command-line RSS aggregator built with TypeScript, PostgreSQL, and Drizzle ORM. It lets you register users, save RSS feeds, follow feeds, fetch posts on an interval, and browse the latest entries from feeds you follow.
+gator is a command-line RSS aggregator built with TypeScript, PostgreSQL, and Drizzle ORM. It lets you register users, save RSS feeds, follow feeds, fetch posts on an interval, and browse the latest entries from feeds you follow.
 
 ## Requirements
 
